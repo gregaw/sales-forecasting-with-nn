@@ -14,13 +14,20 @@ You will be able to run your code locally and on google cloud platform for scala
 
 ## Setup
 
+You will need: 
+
+- anaconda (https://conda.io/docs/user-guide/install/index.html)
+- [optional] google cloud ml-engine (there's free tier available) and shell (https://cloud.google.com/sdk/)
+
+Once you get those installed, run:
+
 > conda create -n mlengine python=2.7 anaconda
 
 > source activate mlengine
 
 > pip install -r requirements.txt
 
-Note: checkout the setup.txt with some dumps of the environment correctly setup.
+Note: check the setup.txt with some dumps of the environment correctly setup.
 
 ## Running locally
 Use run_next_local.py, which will create a new job_name (with sequential numbers)
