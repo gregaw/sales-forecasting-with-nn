@@ -20,7 +20,7 @@ You will need:
 - anaconda (https://conda.io/docs/user-guide/install/index.html)
 - [optional] google cloud ml-engine (there's free tier available) and shell (https://cloud.google.com/sdk/)
 
-Once you get those installed, run:
+Once you get those installed (and have this git repo cloned locally), run:
 
 > conda create -n mlengine python=2.7 anaconda
 
