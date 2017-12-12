@@ -27,7 +27,7 @@ import numpy as np
 
 import model
 
-FILE_PATH = 'checkpoint.{epoch:06d}.hdf5'
+CHECKPOINT_PATH = 'checkpoint.{epoch:06d}.hdf5'
 MODEL_FILENAME = 'sales_forecaster.hdf5'
 
 
@@ -53,9 +53,11 @@ class TensorBoardMetricsLogger:
 
 
 class ContinuousEval(keras.callbacks.Callback):
-    """Continuous eval callback to evaluate the checkpoint once
-     every so many epochs.
-  """
+    """
+    Continuous eval callback to evaluate the checkpoint once every so many epochs.
+    Saves
+    Saves eval predictions to 'preds' folder and Tensorboard eval metrics to 'val_logs' folder.
+    """
 
     def __init__(self,
                  eval_frequency,
@@ -72,7 +74,7 @@ class ContinuousEval(keras.callbacks.Callback):
         self.steps = steps
         self.tf_logger = TensorBoardMetricsLogger(os.path.join(job_dir, 'val_logs'))
         self.epochs_since_last_save = 0
-        os.makedirs(os.path.join(self.job_dir,'preds'))
+        os.makedirs(os.path.join(self.job_dir, 'preds'))
 
     def __enter__(self):
         return self
@@ -94,14 +96,14 @@ class ContinuousEval(keras.callbacks.Callback):
                 checkpoints.sort()
                 forecast_model = load_model(checkpoints[-1])
                 forecast_model = model.compile_model(forecast_model)
-                X, Y = model.load_features(self.eval_files, self.scaler)
-                metrics = forecast_model.evaluate(X, Y)
+                x, y = model.load_features(self.eval_files, self.scaler)
+                metrics = forecast_model.evaluate(x, y)
                 print '\n*** Evaluation epoch[{}] metrics {}'.format(
                     epoch, metrics, forecast_model.metrics_names)
 
-                yhat = forecast_model.predict(X)
-                yhat = model.invert_scale_sales(yhat, self.scaler)
-                np.savetxt(os.path.join(self.job_dir, 'preds/yhat_{:06d}.txt'.format(epoch)), yhat)
+                y_hat = forecast_model.predict(x)
+                y_hat = model.invert_scale_sales(y_hat, self.scaler)
+                np.savetxt(os.path.join(self.job_dir, 'preds/yhat_{:06d}.txt'.format(epoch)), y_hat)
 
                 self.tf_logger.append(
                     metrics_dict={name: value for (name, value) in zip(forecast_model.metrics_names, metrics)},
@@ -121,6 +123,8 @@ def dispatch(train_files,
              eval_frequency,
              num_epochs,
              checkpoint_epochs):
+
+    # setting the seed for reproducibility
     np.random.seed(13)
 
     forecast_model = model.model_fn()
@@ -129,12 +133,12 @@ def dispatch(train_files,
 
     try:
         os.makedirs(job_dir)
-    except:
-        pass
+    except Exception as e:
+        print e
 
     # Unhappy hack to work around h5py not being able to write to GCS.
     # Force snapshots and saves to local filesystem, then copy them over to GCS.
-    checkpoint_path = FILE_PATH
+    checkpoint_path = CHECKPOINT_PATH
     if not job_dir.startswith("gs://"):
         checkpoint_path = os.path.join(job_dir, checkpoint_path)
 
@@ -160,11 +164,10 @@ def dispatch(train_files,
             embeddings_freq=0)
 
         callbacks = [checkpoint, evaluation, tblog]
-        # callbacks=[]
 
-        X, Y = model.load_features(train_files, scaler)
+        x, y = model.load_features(train_files, scaler)
         forecast_model.fit(
-            X, Y,
+            x, y,
             epochs=num_epochs,
             callbacks=callbacks)
 
@@ -214,9 +217,9 @@ def parse_args(args=None):
                         type=int,
                         default=5,
                         help='Checkpoint per n training epochs')
-    parse_args, unknown = parser.parse_known_args(args)
+    parsed_args, unknown = parser.parse_known_args(args)
 
-    return parse_args
+    return parsed_args
 
 
 if __name__ == "__main__":

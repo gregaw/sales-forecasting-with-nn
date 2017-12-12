@@ -1,6 +1,7 @@
 # Sales forecasting with Keras and Tensorflow
 
 The contents will allow you to play with a Keras model forecasting sales for the data from: https://www.kaggle.com/c/rossmann-store-sales 
+
 You will be able to run your code locally and on google cloud platform for scalability.
 
 ## Contents

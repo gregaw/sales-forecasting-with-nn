@@ -35,20 +35,21 @@ def compile_model(model):
 def create_windows(dataset, look_back=1):
     """
     create windows of data
-    :param dataset:
+    :param dataset: first column (sales) is to be have row look back, rest is just appended
     :param look_back:
-    :return: ( (n-LB-1, LB+1), (n-LB-1, 1) )
+    :return: ( x:(n-LB-1, LB+1), y:(n-LB-1, 1) )
     """
-    dataX, dataY = [], []
+    x, y = [], []
     for i in range(len(dataset) - look_back):
-        a = dataset[i:(i + look_back), 0]
-        a = np.append(a, dataset[i + look_back, 1:])  # appending CONT
-        dataX.append(a)
-        dataY.append(dataset[i + look_back, 0])
-    return np.array(dataX), np.array(dataY)
+        row = dataset[i:(i + look_back), 0]
+        row = np.append(row, dataset[i + look_back, 1:])  # appending CONT
+        x.append(row)
+        y.append(dataset[i + look_back, 0])
+    return np.array(x), np.array(y)
 
 
 def build_scaler(input_files):
+    """builds scaler based on all the input_files"""
     values = [_read_raw(input_file) for input_file in input_files]
     full_dataset = np.concatenate(values)
 
@@ -60,27 +61,28 @@ def build_scaler(input_files):
 
 def invert_scale_sales(sales_vector, scaler):
     """(n,1) -> (n,features) -> invert_scale -> (n,1)"""
-    inverted_sales = sales_vector - scaler.min_[0]
-    inverted_sales /= scaler.scale_[0]
+    # demo: hardcoding sales index
+    sales_index = 0
+    inverted_sales = sales_vector - scaler.min_[sales_index]
+    inverted_sales /= scaler.scale_[sales_index]
 
     return inverted_sales
 
 
 def load_features(input_files, scaler):
     """generate features
-    :returns (X, Y)
+    :returns (x, y)
     """
-
     # demo: we just use one file
     input_file = input_files[0]
 
-    dataset = _read_raw(input_file)
+    data = _read_raw(input_file)
 
-    dataset = scaler.transform(dataset)
+    data = scaler.transform(data)
 
-    X, Y = create_windows(dataset, LOOK_BACK)
+    x, y = create_windows(data, LOOK_BACK)
 
-    return X, Y
+    return x, y
 
 
 def _read_raw(input_file):
@@ -88,4 +90,5 @@ def _read_raw(input_file):
 
     values = df[FEATURES_ALL].values
     values = values.astype('float32')
+
     return values
