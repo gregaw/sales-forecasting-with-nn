@@ -1,0 +1,224 @@
+# Copyright 2017 The TensorFlow Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ==============================================================================
+
+"""This code implements a Feed forward neural network using Keras API."""
+
+import argparse
+import glob
+
+import keras
+import os
+from keras.models import load_model
+from tensorflow.python.lib.io import file_io
+import tensorflow as tf
+import numpy as np
+
+import model
+
+FILE_PATH = 'checkpoint.{epoch:06d}.hdf5'
+MODEL_FILENAME = 'sales_forecaster.hdf5'
+
+
+class TensorBoardMetricsLogger:
+    """Log your own metrics to be shown by TensorBoard"""
+
+    def __init__(self, log_dir):
+        self.log_dir = log_dir
+        self.writer = tf.summary.FileWriter(self.log_dir)
+
+    def append(self, metrics_dict, epoch):
+        for (name, value) in metrics_dict.iteritems():
+            summary = tf.Summary()
+            summary_value = summary.value.add()
+            summary_value.simple_value = value
+            summary_value.tag = name
+            self.writer.add_summary(summary, epoch)
+
+        self.writer.flush()
+
+    def close(self):
+        self.writer.close()
+
+
+class ContinuousEval(keras.callbacks.Callback):
+    """Continuous eval callback to evaluate the checkpoint once
+     every so many epochs.
+  """
+
+    def __init__(self,
+                 eval_frequency,
+                 eval_files,
+                 learning_rate,
+                 job_dir,
+                 scaler,
+                 steps=1000):
+        self.scaler = scaler
+        self.eval_files = eval_files
+        self.eval_frequency = eval_frequency
+        self.learning_rate = learning_rate
+        self.job_dir = job_dir
+        self.steps = steps
+        self.tf_logger = TensorBoardMetricsLogger(os.path.join(job_dir, 'val_logs'))
+        self.epochs_since_last_save = 0
+        os.makedirs(os.path.join(self.job_dir,'preds'))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.tf_logger.close()
+
+    def on_epoch_end(self, epoch, logs={}):
+        self.epochs_since_last_save += 1
+        if self.epochs_since_last_save >= self.eval_frequency:
+            self.epochs_since_last_save = 0
+            # Unhappy hack to work around h5py not being able to write to GCS.
+            # Force snapshots and saves to local filesystem, then copy them over to GCS.
+            model_path_glob = 'checkpoint.*'
+            if not self.job_dir.startswith("gs://"):
+                model_path_glob = os.path.join(self.job_dir, model_path_glob)
+            checkpoints = glob.glob(model_path_glob)
+            if len(checkpoints) > 0:
+                checkpoints.sort()
+                forecast_model = load_model(checkpoints[-1])
+                forecast_model = model.compile_model(forecast_model)
+                X, Y = model.load_features(self.eval_files, self.scaler)
+                metrics = forecast_model.evaluate(X, Y)
+                print '\n*** Evaluation epoch[{}] metrics {}'.format(
+                    epoch, metrics, forecast_model.metrics_names)
+
+                yhat = forecast_model.predict(X)
+                yhat = model.invert_scale_sales(yhat, self.scaler)
+                np.savetxt(os.path.join(self.job_dir, 'preds/yhat_{:06d}.txt'.format(epoch)), yhat)
+
+                self.tf_logger.append(
+                    metrics_dict={name: value for (name, value) in zip(forecast_model.metrics_names, metrics)},
+                    epoch=epoch
+                )
+
+                if self.job_dir.startswith("gs://"):
+                    copy_file_to_gcs(self.job_dir, checkpoints[-1])
+            else:
+                print '\n*** Evaluation epoch[{}] (no checkpoints found)'.format(epoch)
+
+
+def dispatch(train_files,
+             eval_files,
+             job_dir,
+             learning_rate,
+             eval_frequency,
+             num_epochs,
+             checkpoint_epochs):
+    np.random.seed(13)
+
+    forecast_model = model.model_fn()
+
+    scaler = model.build_scaler(train_files + eval_files)
+
+    try:
+        os.makedirs(job_dir)
+    except:
+        pass
+
+    # Unhappy hack to work around h5py not being able to write to GCS.
+    # Force snapshots and saves to local filesystem, then copy them over to GCS.
+    checkpoint_path = FILE_PATH
+    if not job_dir.startswith("gs://"):
+        checkpoint_path = os.path.join(job_dir, checkpoint_path)
+
+    # Model checkpoint callback
+    checkpoint = keras.callbacks.ModelCheckpoint(
+        checkpoint_path,
+        verbose=1,
+        period=checkpoint_epochs
+    )
+
+    # Continuous eval callback
+    with ContinuousEval(eval_frequency,
+                        eval_files,
+                        learning_rate,
+                        job_dir,
+                        scaler) as evaluation:
+
+        # Tensorboard logs callback
+        tblog = keras.callbacks.TensorBoard(
+            log_dir=os.path.join(job_dir, 'logs'),
+            histogram_freq=0,
+            write_graph=True,
+            embeddings_freq=0)
+
+        callbacks = [checkpoint, evaluation, tblog]
+        # callbacks=[]
+
+        X, Y = model.load_features(train_files, scaler)
+        forecast_model.fit(
+            X, Y,
+            epochs=num_epochs,
+            callbacks=callbacks)
+
+        # Unhappy hack to work around h5py not being able to write to GCS.
+        # Force snapshots and saves to local filesystem, then copy them over to GCS.
+        if job_dir.startswith("gs://"):
+            forecast_model.save(MODEL_FILENAME)
+            copy_file_to_gcs(job_dir, MODEL_FILENAME)
+        else:
+            forecast_model.save(os.path.join(job_dir, MODEL_FILENAME))
+
+
+# h5py workaround: copy local models over to GCS if the job_dir is GCS.
+def copy_file_to_gcs(job_dir, file_path):
+    with file_io.FileIO(file_path, mode='r') as input_f:
+        with file_io.FileIO(os.path.join(job_dir, file_path), mode='w+') as output_f:
+            output_f.write(input_f.read())
+
+
+def parse_args(args=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--train-files',
+                        required=True,
+                        type=str,
+                        help='Training files local or GCS', nargs='+')
+    parser.add_argument('--eval-files',
+                        required=True,
+                        type=str,
+                        help='Evaluation files local or GCS', nargs='+')
+    parser.add_argument('--job-dir',
+                        required=True,
+                        type=str,
+                        help='GCS or local dir to write checkpoints and export model')
+    parser.add_argument('--learning-rate',
+                        type=float,
+                        default=0.003,
+                        help='Learning rate for SGD')
+    parser.add_argument('--eval-frequency',
+                        type=int,
+                        default=10,
+                        help='Perform one evaluation per n epochs')
+    parser.add_argument('--num-epochs',
+                        type=int,
+                        default=20,
+                        help='Maximum number of epochs on which to train')
+    parser.add_argument('--checkpoint-epochs',
+                        type=int,
+                        default=5,
+                        help='Checkpoint per n training epochs')
+    parse_args, unknown = parser.parse_known_args(args)
+
+    return parse_args
+
+
+if __name__ == "__main__":
+    parsed_args = parse_args()
+    dispatch(**parsed_args.__dict__)

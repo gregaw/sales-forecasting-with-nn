@@ -1,0 +1,91 @@
+"""Sales Forecast as a Neural Network model."""
+
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from keras import layers, models
+from sklearn.preprocessing import MinMaxScaler
+
+LOOK_BACK = 20
+
+FEATURES_CONT = []
+FEATURES_WINDOW = ['Sales']
+FEATURES_ALL = FEATURES_WINDOW + FEATURES_CONT
+
+FEATURE_SIZE = LOOK_BACK + len(FEATURES_CONT)
+
+
+def model_fn():
+    """Create a Keras Sequential model with layers."""
+    model = models.Sequential()
+    model.add(layers.Dense(4, input_shape=(FEATURE_SIZE,)))
+    model.add(layers.Dense(1))
+
+    compile_model(model)
+
+    return model
+
+
+def compile_model(model):
+    """Compiles the model - either created or loaded"""
+    model.compile(loss='mean_squared_error', optimizer='adam', metrics=['mae'])
+    return model
+
+
+def create_windows(dataset, look_back=1):
+    """
+    create windows of data
+    :param dataset:
+    :param look_back:
+    :return: ( (n-LB-1, LB+1), (n-LB-1, 1) )
+    """
+    dataX, dataY = [], []
+    for i in range(len(dataset) - look_back):
+        a = dataset[i:(i + look_back), 0]
+        a = np.append(a, dataset[i + look_back, 1:])  # appending CONT
+        dataX.append(a)
+        dataY.append(dataset[i + look_back, 0])
+    return np.array(dataX), np.array(dataY)
+
+
+def build_scaler(input_files):
+    values = [_read_raw(input_file) for input_file in input_files]
+    full_dataset = np.concatenate(values)
+
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    scaler.fit(full_dataset)
+
+    return scaler
+
+
+def invert_scale_sales(sales_vector, scaler):
+    """(n,1) -> (n,features) -> invert_scale -> (n,1)"""
+    inverted_sales = sales_vector - scaler.min_[0]
+    inverted_sales /= scaler.scale_[0]
+
+    return inverted_sales
+
+
+def load_features(input_files, scaler):
+    """generate features
+    :returns (X, Y)
+    """
+
+    # demo: we just use one file
+    input_file = input_files[0]
+
+    dataset = _read_raw(input_file)
+
+    dataset = scaler.transform(dataset)
+
+    X, Y = create_windows(dataset, LOOK_BACK)
+
+    return X, Y
+
+
+def _read_raw(input_file):
+    df = pd.read_csv(tf.gfile.Open(input_file), parse_dates=['Date'], dtype={'StateHoliday': np.str})
+
+    values = df[FEATURES_ALL].values
+    values = values.astype('float32')
+    return values

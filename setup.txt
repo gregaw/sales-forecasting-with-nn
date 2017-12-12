@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+
+> git clone https://github.com/gregaw/sales-forecasting-with-nn.git
+
+> conda create -n mlengine python=2.7 anaconda
+
+> source activate mlengine
+
+> pip install -r requirements.txt
+
+> python versions.py
+scipy: 0.19.1
+numpy: 1.13.3
+matplotlib: 2.1.0
+pandas: 0.19.2
+statsmodels: 0.8.0
+sklearn: 0.19.1
+tensorflow: 1.2.0
+Using TensorFlow backend.
+keras: 2.0.4
+
+> python run_next_local.py
+Using TensorFlow backend.
+2017-12-12 10:12:51.005460: W tensorflow/core/platform/cpu_feature_guard.cc:45] The TensorFlow library wasn't compiled to use SSE4.2 instructions, but these are available on your machine and could speed up CPU computations.
+2017-12-12 10:12:51.005500: W tensorflow/core/platform/cpu_feature_guard.cc:45] The TensorFlow library wasn't compiled to use AVX instructions, but these are available on your machine and could speed up CPU computations.
+2017-12-12 10:12:51.005507: W tensorflow/core/platform/cpu_feature_guard.cc:45] The TensorFlow library wasn't compiled to use AVX2 instructions, but these are available on your machine and could speed up CPU computations.
+2017-12-12 10:12:51.005512: W tensorflow/core/platform/cpu_feature_guard.cc:45] The TensorFlow library wasn't compiled to use FMA instructions, but these are available on your machine and could speed up CPU computations.
+Epoch 1/5
+638/638 [==============================] - 0s - loss: 0.1021 - mean_absolute_error: 0.2631
+Epoch 2/5
+638/638 [==============================] - 0s - loss: 0.0384 - mean_absolute_error: 0.1534
+Epoch 3/5
+638/638 [==============================] - 0s - loss: 0.0337 - mean_absolute_error: 0.1426
+Epoch 4/5
+638/638 [==============================] - 0s - loss: 0.0296 - mean_absolute_error: 0.1352
+Epoch 5/5
+ 32/638 [>.............................] - ETA: 0s - loss: 0.0250 - mean_absolute_error: 0.1093Epoch 00004: saving model to output/mac_000062/checkpoint.000004.hdf5
+ 32/262 [==>...........................] - ETA: 0s
+*** Evaluation epoch[4] metrics [0.023587044186264505, 0.12158035174125933]
+638/638 [==============================] - 1s - loss: 0.0265 - mean_absolute_error: 0.1270
+
+> scripts/setup-gcp.sh
+Creating gs://sales_forecast-187012/...
+ServiceException: 409 Bucket sales_forecast-187012 already exists.
+Copying file://data/train1.csv [Content-Type=text/csv]...
+- [1 files][ 20.1 KiB/ 20.1 KiB]
+Operation completed over 1 objects/20.1 KiB.
+Copying file://data/eval1.csv [Content-Type=text/csv]...
+- [1 files][  8.7 KiB/  8.7 KiB]
+Operation completed over 1 objects/8.7 KiB.
+
+> scripts/job-cloud.sh
+Job [gcp_000001] submitted successfully.
+INFO	2017-12-12 10:22:10 +0100	service		Validating job requirements...
+INFO	2017-12-12 10:22:10 +0100	service		Job creation request has been successfully validated.
+INFO	2017-12-12 10:22:10 +0100	service		Job gcp_000001 is queued.
+INFO	2017-12-12 10:22:11 +0100	service		Waiting for job to be provisioned.
+INFO	2017-12-12 10:26:42 +0100	service		Waiting for TensorFlow to start.
+INFO	2017-12-12 10:28:48 +0100	master-replica-0		Running task with arguments: --cluster={"master": ["cmle-training-master-7f51f41daa-0:2222"]} --task={"type": "master", "index": 0} --job={
+
+> scripts/clean-gcp.sh
+Removing gs://sales_forecast-187012/checkpoint.000099.hdf5#1513070989936871...
+Removing gs://sales_forecast-187012/sales_forecaster.hdf5#1513070990734795...
+Removing gs://sales_forecast-187012/data/eval1.csv#1513070050356117...
+Removing gs://sales_forecast-187012/data/train1.csv#1513070048197151...
+Removing gs://sales_forecast-187012/gcp_000000/packages/5752312d1f4d7cd4c9867d2e3dadc52bc4856582c06913d881710fdb294015e4/trainer-0.1.tar.gz#1513070231817221...
+Removing gs://sales_forecast-187012/logs/#1513070946515610...
+Removing gs://sales_forecast-187012/logs/events.out.tfevents.1513070946.cmle-training-master-7f51f41daa-0-kxb4c#1513070990323710...
+Removing gs://sales_forecast-187012/val_logs/#1513070945319423...
+Removing gs://sales_forecast-187012/packages/68731b28be34d9942dec3b9ab6f3bf4e9adc43b0501784c9f03bf51a90b32f21/trainer-0.1.tar.gz#1513070529246338...
+Removing gs://sales_forecast-187012/val_logs/events.out.tfevents.1513070988.cmle-training-master-7f51f41daa-0-kxb4c#1513070989624962...
+/ [10/10 objects] 100% Done
+Operation completed over 10 objects.
+Removing gs://sales_forecast-187012/...
+
+> jupyter notebook
+[I 10:33:16.320 NotebookApp] Serving notebooks from local directory: /Users/gregaw/code/adhoc/src/SalesForecaster
+[I 10:33:16.320 NotebookApp] 0 active kernels
+[I 10:33:16.320 NotebookApp] The Jupyter Notebook is running at: http://localhost:8888/?token=e6e3e906064ae4c6aacbd114c6f106daa00b81222a36a875
+
+
+> python -m tensorflow.tensorboard --logdir=output --port=8080
+Starting TensorBoard 54 at http://Machito.local:8080
+(Press CTRL+C to quit)
+
+> source deactivate
