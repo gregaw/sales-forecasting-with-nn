@@ -28,7 +28,8 @@ Once you get those installed (and have this git repo cloned locally), run:
 
 > pip install -r requirements.txt
 
-Note: check the setup.txt with some dumps of the environment correctly setup.
+Note  : (you can also set it up with python=3.6, but you might have problems running this on GCP ML-engine)
+Note2 : check the setup.txt with some dumps of the environment correctly setup.
 
 ## Running locally
 Use run_next_local.py, which will create a new job_name (with sequential numbers)
