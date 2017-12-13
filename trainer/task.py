@@ -25,7 +25,7 @@ from tensorflow.python.lib.io import file_io
 import tensorflow as tf
 import numpy as np
 
-import model
+from trainer import model
 
 CHECKPOINT_PATH = 'checkpoint.{epoch:06d}.hdf5'
 MODEL_FILENAME = 'sales_forecaster.hdf5'
@@ -39,7 +39,7 @@ class TensorBoardMetricsLogger:
         self.writer = tf.summary.FileWriter(self.log_dir)
 
     def append(self, metrics_dict, epoch):
-        for (name, value) in metrics_dict.iteritems():
+        for (name, value) in metrics_dict.items():
             summary = tf.Summary()
             summary_value = summary.value.add()
             summary_value.simple_value = value
@@ -98,8 +98,8 @@ class ContinuousEval(keras.callbacks.Callback):
                 forecast_model = model.compile_model(forecast_model)
                 x, y = model.load_features(self.eval_files, self.scaler)
                 metrics = forecast_model.evaluate(x, y)
-                print '\n*** Evaluation epoch[{}] metrics {}'.format(
-                    epoch, metrics, forecast_model.metrics_names)
+                print('\n*** Evaluation epoch[{}] metrics {}'.format(
+                    epoch, metrics, forecast_model.metrics_names))
 
                 y_hat = forecast_model.predict(x)
                 y_hat = model.invert_scale_sales(y_hat, self.scaler)
@@ -113,7 +113,7 @@ class ContinuousEval(keras.callbacks.Callback):
                 if self.job_dir.startswith("gs://"):
                     copy_file_to_gcs(self.job_dir, checkpoints[-1])
             else:
-                print '\n*** Evaluation epoch[{}] (no checkpoints found)'.format(epoch)
+                print('\n*** Evaluation epoch[{}] (no checkpoints found)'.format(epoch))
 
 
 def dispatch(train_files,
@@ -134,7 +134,7 @@ def dispatch(train_files,
     try:
         os.makedirs(job_dir)
     except Exception as e:
-        print e
+        print(e)
 
     # Unhappy hack to work around h5py not being able to write to GCS.
     # Force snapshots and saves to local filesystem, then copy them over to GCS.
