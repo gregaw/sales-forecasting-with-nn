@@ -3,4 +3,4 @@
 source `dirname $0`/config.txt
 
 gsutil -m cp -rn ${GCS_BUCKET} gcp-output
-cp -R ${GCS_BUCKET} output
+cp -R gcp-output output
