@@ -65,8 +65,16 @@ class ContinuousEval(keras.callbacks.Callback):
                  learning_rate,
                  job_dir,
                  scaler,
+                 labelencoder_DayOfWeek,
+                 labelencoder_StoreType,
+                 labelencoder_Assortment,
+                 onehotencoder,
                  steps=1000):
         self.scaler = scaler
+        self.labelencoder_DayOfWeek = labelencoder_DayOfWeek
+        self.labelencoder_StoreType = labelencoder_StoreType
+        self.labelencoder_Assortment = labelencoder_Assortment
+        self.onehotencoder = onehotencoder
         self.eval_files = eval_files
         self.eval_frequency = eval_frequency
         self.learning_rate = learning_rate
@@ -96,9 +104,9 @@ class ContinuousEval(keras.callbacks.Callback):
                 checkpoints.sort()
                 forecast_model = load_model(checkpoints[-1])
                 forecast_model = model.compile_model(forecast_model)
-                x, y = model.load_features(self.eval_files, self.scaler)
+                x, y = model.load_features(self.eval_files, self.scaler, self.labelencoder_DayOfWeek, self.labelencoder_StoreType, self.labelencoder_Assortment, self.onehotencoder)
                 metrics = forecast_model.evaluate(x, y)
-                print('\n*** Evaluation epoch[{}] metrics {}'.format(
+                print('\n*** Evaluation epoch[{}] metrics {} {}'.format(
                     epoch, metrics, forecast_model.metrics_names))
 
                 y_hat = forecast_model.predict(x)
@@ -127,9 +135,30 @@ def dispatch(train_files,
     # setting the seed for reproducibility
     np.random.seed(13)
 
-    forecast_model = model.model_fn()
+    # get all data and build labelencoder and onehotencoder
+    full_dataset = model.get_all_data(train_files + eval_files)
+    
+    # convert values in categorical columns to numerical 0-n
+    labelencoder_DayOfWeek = model.build_labelencoder('DayOfWeek', full_dataset)
+    labelencoder_StoreType = model.build_labelencoder('StoreType', full_dataset)
+    labelencoder_Assortment = model.build_labelencoder('Assortment', full_dataset)
+    
+    # NOTE: apply label encoders before build onehotencoder
+    model.apply_labelencoder('DayOfWeek', labelencoder_DayOfWeek, full_dataset)
+    model.apply_labelencoder('StoreType', labelencoder_StoreType, full_dataset)
+    model.apply_labelencoder('Assortment', labelencoder_Assortment, full_dataset)
 
-    scaler = model.build_scaler(train_files + eval_files)
+    # DayOfWeek should be considered as categorical data and not as numerical
+    onehotencoder = model.build_onehotencoder(['DayOfWeek', 'StoreType', 'Assortment'], full_dataset)
+    #onehotencoder_DayOfWeek = model.build_onehotencoder_DayOfWeek(full_dataset)
+    full_dataset = model.getOneHotEncodedData(onehotencoder, full_dataset)
+
+    # NOTE: must be called after apply Label- and OneHot- Encoder
+    scaler = model.build_scaler(full_dataset)
+
+    # finally we can create our model
+    input_data_shape = model.get_input_shape(full_dataset)
+    forecast_model = model.model_fn(input_data_shape)
 
     try:
         os.makedirs(job_dir)
@@ -154,7 +183,11 @@ def dispatch(train_files,
                         eval_files,
                         learning_rate,
                         job_dir,
-                        scaler) as evaluation:
+                        scaler,
+                        labelencoder_DayOfWeek,
+                        labelencoder_StoreType,
+                        labelencoder_Assortment,
+                        onehotencoder) as evaluation:
 
         # Tensorboard logs callback
         tblog = keras.callbacks.TensorBoard(
@@ -165,7 +198,7 @@ def dispatch(train_files,
 
         callbacks = [checkpoint, evaluation, tblog]
 
-        x, y = model.load_features(train_files, scaler)
+        x, y = model.load_features(train_files, scaler, labelencoder_DayOfWeek, labelencoder_StoreType, labelencoder_Assortment, onehotencoder)
         forecast_model.fit(
             x, y,
             epochs=num_epochs,

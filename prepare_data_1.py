@@ -2,14 +2,32 @@ import pandas as pd
 import numpy as np
 
 input_file = "data/train.csv"
-df = pd.read_csv(input_file, parse_dates=['Date'], dtype={'StateHoliday': np.str})
+stores_input_file = "data/store.csv"
 
-# TODO just one store for now
-df = df[df.Store == 1]
+dftrain = pd.read_csv(input_file, parse_dates=['Date'], dtype={'StateHoliday': np.str})
+dfstore = pd.read_csv(stores_input_file)
 
-# we want to start with earlier first
-df.sort_values(by=['Date'], ascending=True, inplace=True)
+# possible shortcut for labelencode
+map_char = {
+        'a': 0,
+        'b': 1,
+        'c': 2,
+        'd': 3
+        }
 
-train_size = int(0.7 * df.shape[0])
-df[:train_size].to_csv('data/train1.csv', index=False)
-df[train_size:].to_csv('data/eval1.csv', index=False)
+# create train/eval files for each store
+for index, row in dfstore.iterrows():
+    store_id = str(row['Store'])
+    finalRowsDF = dftrain.loc[dftrain['Store'] == row['Store']]
+    # we want to start with earlier first
+    finalRowsDF = finalRowsDF.sort_values(by=['Date'], ascending=True)
+
+    #add info about the store
+    #sellStoreDF['Assortment'] = map_char[row['Assortment']]
+    #sellStoreDF['StoreType'] = map_char[row['StoreType']]
+    finalRowsDF['Assortment'] = row['Assortment']
+    finalRowsDF['StoreType'] = row['StoreType']
+
+    train_size = int(0.7 * finalRowsDF.shape[0])
+    finalRowsDF[0:train_size].to_csv('data/train' + store_id + '.csv', index=False)
+    finalRowsDF[train_size:].to_csv('data/eval' + store_id + '.csv', index=False)
