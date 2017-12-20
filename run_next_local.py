@@ -2,8 +2,8 @@ import os
 
 from trainer import task
 
-epochs = 50
-eval_epoch_freq = 10
+epochs = 3000
+eval_epoch_freq = 200
 
 
 # ======================================================

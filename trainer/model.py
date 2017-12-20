@@ -7,20 +7,24 @@ from keras import layers, models
 from sklearn.preprocessing import MinMaxScaler
 
 LOOK_BACK = 20
+LOOK_BACK_CUSTOMERS = 20
+LOOK_BACK_OPEN = 6
 
-FEATURES_CONT = []
-FEATURES_WINDOW = ['Sales']
+CUSTOMERS_FEATURE_COUNT = 1
+
+FEATURES_CONT = ['Open','Promo']
+FEATURES_WINDOW = ['Sales','Customers']
 FEATURES_ALL = FEATURES_WINDOW + FEATURES_CONT
 
-FEATURE_SIZE = LOOK_BACK + len(FEATURES_CONT)
+FEATURE_SIZE = LOOK_BACK + len(FEATURES_CONT) + LOOK_BACK_OPEN + CUSTOMERS_FEATURE_COUNT
 
 
 def model_fn():
     """Create a Keras Sequential model with layers."""
     model = models.Sequential()
-    model.add(layers.Dense(4, input_shape=(FEATURE_SIZE,)))
+    model.add(layers.Dense(4, activation='relu', input_shape=(FEATURE_SIZE,)))
+    model.add(layers.Dense(2, activation='relu'))
     model.add(layers.Dense(1))
-
     compile_model(model)
 
     return model
@@ -32,17 +36,25 @@ def compile_model(model):
     return model
 
 
-def create_windows(dataset, look_back=1):
+def create_windows(dataset, look_back=1,look_back_customers=1,look_back_open=1):
     """
     create windows of data
     :param dataset: first column (sales) is to be have row look back, rest is just appended
     :param look_back:
+    :param look_back_customers:
+    :param look_back_open:
     :return: ( x:(n-LB-1, LB+1), y:(n-LB-1, 1) )
     """
     x, y = [], []
     for i in range(len(dataset) - look_back):
         row = dataset[i:(i + look_back), 0]
-        row = np.append(row, dataset[i + look_back, 1:])  # appending CONT
+        customers_window = dataset[i + (look_back - look_back_customers):(i + look_back),
+                           1]
+        customers_window = customers_window if len(customers_window) >0 else [0]
+        row = np.append(row,np.mean(customers_window))
+        open_window = dataset[i + (look_back - look_back_open):(i + look_back), 2]
+        row = np.append(row, open_window)
+        row = np.append(row, dataset[i + look_back, len(FEATURES_WINDOW):len(FEATURES_WINDOW)+len(FEATURES_CONT)])  # appending CONT
         x.append(row)
         y.append(dataset[i + look_back, 0])
     return np.array(x), np.array(y)
@@ -80,7 +92,7 @@ def load_features(input_files, scaler):
 
     data = scaler.transform(data)
 
-    x, y = create_windows(data, LOOK_BACK)
+    x, y = create_windows(data, LOOK_BACK,LOOK_BACK_CUSTOMERS,LOOK_BACK_OPEN)
 
     return x, y
 
