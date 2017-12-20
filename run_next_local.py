@@ -2,7 +2,7 @@ import os
 
 from trainer import task
 
-epochs = 50
+epochs = 200
 eval_epoch_freq = 10
 
 

@@ -18,7 +18,8 @@ FEATURE_SIZE = LOOK_BACK + len(FEATURES_CONT)
 def model_fn():
     """Create a Keras Sequential model with layers."""
     model = models.Sequential()
-    model.add(layers.Dense(4, input_shape=(FEATURE_SIZE,)))
+    model.add(layers.Dense(30, input_shape=(FEATURE_SIZE,), activation='relu'))
+    model.add(layers.Dense(5, input_shape=(FEATURE_SIZE,), activation='relu'))
     model.add(layers.Dense(1))
 
     compile_model(model)
