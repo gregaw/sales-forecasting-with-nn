@@ -22,8 +22,8 @@ FEATURE_SIZE = LOOK_BACK + len(FEATURES_CONT) + LOOK_BACK_OPEN + CUSTOMERS_FEATU
 def model_fn():
     """Create a Keras Sequential model with layers."""
     model = models.Sequential()
-    model.add(layers.Dense(4, activation='relu', input_shape=(FEATURE_SIZE,)))
-    model.add(layers.Dense(2, activation='relu'))
+    model.add(layers.Dense(3, activation='relu', input_shape=(FEATURE_SIZE,)))
+    model.add(layers.Dense(3, activation='relu'))
     model.add(layers.Dense(1))
     compile_model(model)
 
@@ -47,12 +47,12 @@ def create_windows(dataset, look_back=1,look_back_customers=1,look_back_open=1):
     """
     x, y = [], []
     for i in range(len(dataset) - look_back):
-        row = dataset[i:(i + look_back), 0]
+        row = dataset[i:(i + look_back), FEATURES_ALL.index('Sales')]
         customers_window = dataset[i + (look_back - look_back_customers):(i + look_back),
-                           1]
+                        FEATURES_ALL.index('Customers')]
         customers_window = customers_window if len(customers_window) >0 else [0]
         row = np.append(row,np.mean(customers_window))
-        open_window = dataset[i + (look_back - look_back_open):(i + look_back), 2]
+        open_window = dataset[i + (look_back - look_back_open):(i + look_back), FEATURES_ALL.index('Open')]
         row = np.append(row, open_window)
         row = np.append(row, dataset[i + look_back, len(FEATURES_WINDOW):len(FEATURES_WINDOW)+len(FEATURES_CONT)])  # appending CONT
         x.append(row)
