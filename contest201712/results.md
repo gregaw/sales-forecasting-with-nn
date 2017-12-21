@@ -21,7 +21,7 @@ tada......
 
 ## The final ranking
 
-Ranking:
+Ranking (name/id_on_graph/: MAE):
 1. msurdziel/03/:			0.022428641325932266
 2. marcinkosztolowicz/02/:	0.043058410371890996
 3. maciekbb/04/:			0.070445201781086139
