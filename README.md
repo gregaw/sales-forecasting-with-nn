@@ -4,6 +4,10 @@ The contents will allow you to play with a Keras model forecasting sales for the
 
 You will be able to run your code locally and on google cloud platform for scalability.
 
+## Description
+
+This beginner-level workshop will guide you through implementing a sales forecasting neural network model based on an openly available dataset. We will go through some basic neural network theory and apply a systematic model improvement approach to get from a simple model to a more complex one, trying out various tricks along the way.
+
 ## Contents
 - *data*: train and store coming from kaggle Rossman case: 
   - *train1, eval1*: data filtered for just one store (date ascending)
@@ -13,7 +17,13 @@ You will be able to run your code locally and on google cloud platform for scala
 - *scripts* - scripts (mainly gcloud) for dealing with google cloud
 - *trainer* - main model
 
-## Setup
+## Requirements
+
+- python: beginner level
+- a laptop with some software configured (see setup instructions)
+- pandas, numpy, sklearn: nice-to-have
+
+## Setup instructions
 
 You will need: 
 
