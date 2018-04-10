@@ -27,6 +27,7 @@ This beginner-level workshop will guide you through implementing a sales forecas
 
 You will need: 
 
+- a clone of: https://github.com/gregaw/sales-forecasting-with-nn.git
 - anaconda (https://conda.io/docs/user-guide/install/index.html)
 - [optional] google cloud ml-engine (there's free tier available) and shell (https://cloud.google.com/sdk/)
 
