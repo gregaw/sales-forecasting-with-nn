@@ -10,7 +10,7 @@ source `dirname $0`/config.txt
 # ------------------------------------ local-using-gcloud
 #
 
-#rm -rf ./${JOB_DIR}/*
+rm -rf ./${JOB_DIR}/*
 
 gcloud ml-engine local train \
     --module-name trainer.task \
