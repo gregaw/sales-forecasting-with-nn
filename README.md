@@ -51,6 +51,7 @@ Use run_next_local.py, which will create a new job_name (with sequential numbers
 Use scripts under *scripts*
 
 - set your arguments in scripts/config.txt
+
 *Note* gcloud job name has to be unique in your space!
 
 - run the job
