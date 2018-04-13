@@ -45,5 +45,21 @@ Note2 : check the setup.txt with some dumps of the environment correctly setup.
 ## Running locally
 Use run_next_local.py, which will create a new job_name (with sequential numbers)
 
+> python run_next_local.py
+
 ## Running on GCP ML-engine
 Use scripts under *scripts*
+
+- set your arguments in scripts/config.txt
+*Note* gcloud job name has to be unique in your space!
+
+- run the job
+
+> scripts/job-cloud.sh
+
+- download the results locally
+
+> scripts/download.sh
+
+- explore the results with local TensorBoard
+

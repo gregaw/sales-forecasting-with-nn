@@ -14,7 +14,6 @@
 # ==============================================================================
 
 """This code implements a Feed forward neural network using Keras API."""
-
 import argparse
 import glob
 
@@ -25,7 +24,7 @@ from tensorflow.python.lib.io import file_io
 import tensorflow as tf
 import numpy as np
 
-from trainer import model
+import model
 
 CHECKPOINT_PATH = 'checkpoint.{epoch:06d}.hdf5'
 MODEL_FILENAME = 'sales_forecaster.hdf5'
