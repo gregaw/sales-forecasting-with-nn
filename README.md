@@ -53,7 +53,8 @@ Note2 : check the setup.txt with some dumps of the environment correctly setup.
 - `print 'text'` becomes:
 > print('text')
 
-- don't use source
+- `source activate mlengine` becomes:
+> activate mlengine
 
 ## Running locally
 Use run_next_local.py, which will create a new job_name (with sequential numbers)
