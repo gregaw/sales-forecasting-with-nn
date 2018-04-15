@@ -47,10 +47,10 @@ Note2 : check the setup.txt with some dumps of the environment correctly setup.
 - tensorflow is available with python 3.x only, so use:
 > conda create -n mlengine python=3.5 anaconda
 
-- this leads to certain source changes
--- import model in task.py becomes:
+- `import model` in task.py becomes:
 > from trainer import model     
--- print 'text' becomes:
+
+- `print 'text'` becomes:
 > print('text')
 
 - don't use source
