@@ -5,22 +5,32 @@ import pandas as pd
 import tensorflow as tf
 from keras import layers, models
 from sklearn.preprocessing import MinMaxScaler
+from keras.layers.convolutional import Conv1D
+from keras.layers.convolutional import MaxPooling1D
+from keras.utils import to_categorical
 
 LOOK_BACK = 20
 
-FEATURES_CONT = []
-FEATURES_WINDOW = ['Sales']
-FEATURES_ALL = FEATURES_WINDOW + FEATURES_CONT
+DAYS = ['Day_' + str(i) for i in range(1, 8)]
+FEATURES_ALL = ['Sales', 'Open', 'Customers', 'SchoolHoliday'] + DAYS
 
-FEATURE_SIZE = LOOK_BACK + len(FEATURES_CONT)
+FEATURE_SIZE = len(FEATURES_ALL)
 
 
 def model_fn():
     """Create a Keras Sequential model with layers."""
     model = models.Sequential()
-    model.add(layers.Dense(4, input_shape=(FEATURE_SIZE,)))
+    model.add(layers.Conv1D(input_shape=(LOOK_BACK, FEATURE_SIZE), filters=32, kernel_size=5,
+                            padding='same', activation='relu'))
+    model.add(layers.Dropout(0.5))
+    model.add(layers.Conv1D(filters=64, kernel_size=3,
+                            padding='same', activation='relu'))
+    model.add(layers.Flatten())
+    model.add(layers.Dense(64, activation='relu'))
+    model.add(layers.Dropout(0.5))
+    model.add(layers.Dense(64, activation='relu'))
+    model.add(layers.Dropout(0.5))
     model.add(layers.Dense(1))
-
     compile_model(model)
 
     return model
@@ -41,8 +51,8 @@ def create_windows(dataset, look_back=1):
     """
     x, y = [], []
     for i in range(len(dataset) - look_back):
-        row = dataset[i:(i + look_back), 0]
-        row = np.append(row, dataset[i + look_back, 1:])  # appending CONT
+        row = dataset[i:(i + look_back), :]
+        # row = np.append(row, dataset[i + look_back, 1:])  # appending CONT
         x.append(row)
         y.append(dataset[i + look_back, 0])
     return np.array(x), np.array(y)
@@ -86,9 +96,11 @@ def load_features(input_files, scaler):
 
 
 def _read_raw(input_file):
-    df = pd.read_csv(tf.gfile.Open(input_file), parse_dates=['Date'], dtype={'StateHoliday': np.str})
+    df = pd.read_csv(tf.gfile.Open(input_file), parse_dates=[
+                     'Date'], dtype={'StateHoliday': np.str})
 
-    values = df[FEATURES_ALL].values
+    df_normalized = pd.get_dummies(df, columns=['DayOfWeek'], prefix='Day')
+    values = df_normalized[FEATURES_ALL].values
     values = values.astype('float32')
 
     return values
